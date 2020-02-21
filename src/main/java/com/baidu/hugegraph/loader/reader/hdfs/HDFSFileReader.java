@@ -21,6 +21,7 @@ package com.baidu.hugegraph.loader.reader.hdfs;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -104,8 +105,17 @@ public class HDFSFileReader extends FileReader {
 
     private Configuration loadConfiguration() {
         Configuration conf = new Configuration();
-        conf.addResource(new Path(this.source().coreSitePath()));
+        String hadoopHome = System.getenv("HADOOP_HOME");
+        String path = Paths.get(hadoopHome, "etc", "hadoop").toString();
+        conf.addResource(path(path, "/core-site.xml"));
+        conf.addResource(path(path, "/hdfs-site.xml"));
+        conf.addResource(path(path, "/mapred-site.xml"));
+        conf.addResource(path(path, "/yarn-site.xml"));
         return conf;
+    }
+
+    private static Path path(String configPath, String configFile) {
+        return new Path(Paths.get(configPath, configFile).toString());
     }
 
     private static void checkExist(FileSystem fs, Path path) {

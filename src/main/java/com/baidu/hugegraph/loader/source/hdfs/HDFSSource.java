@@ -38,8 +38,8 @@ public class HDFSSource extends FileSource {
     @Override
     public void check() throws IllegalArgumentException {
         super.check();
-        E.checkArgument(!StringUtils.isEmpty(this.coreSitePath),
-                        "The core_site_path can't be empty");
+        // E.checkArgument(!StringUtils.isEmpty(this.coreSitePath),
+        //                 "The core_site_path can't be empty");
     }
 
     public String coreSitePath() {

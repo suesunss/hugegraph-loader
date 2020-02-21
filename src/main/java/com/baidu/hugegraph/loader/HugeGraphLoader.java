@@ -21,6 +21,7 @@ package com.baidu.hugegraph.loader;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 
 import com.baidu.hugegraph.driver.HugeClient;
@@ -61,14 +64,41 @@ public final class HugeGraphLoader {
     private final GraphStruct graphStruct;
     private final TaskManager taskManager;
 
+    private static volatile UserGroupInformation proxyUgi;
+
     public static void main(String[] args) {
         HugeGraphLoader loader = new HugeGraphLoader(args);
-        loader.load();
+        try {
+            proxyUgi.doAs((PrivilegedExceptionAction<Object>) () -> {
+                loader.load();
+                return null;
+            });
+        } catch (IOException | InterruptedException e) {
+            LOG.error("Failed to load with proxy user {}", proxyUgi.getUserName(), e);
+            System.exit(Constants.EXIT_CODE_ERROR);
+        }
+    }
+
+    private void initAuth() {
+        System.setProperty("java.security.krb5.conf", "/etc/krb5.conf");
+        Configuration configuration = new Configuration();
+        configuration.set("hadoop.security.authentication", "Kerberos");
+        UserGroupInformation.setConfiguration(configuration);
+        LoadOptions options = this.context.options();
+        try {
+            UserGroupInformation.loginUserFromKeytab("hdfs@FUXI-LUOGE-02", "/etc/hdfs.keytab");
+            UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
+            proxyUgi = UserGroupInformation.createProxyUser(options.proxyUser, superUser);
+        } catch (IOException e) {
+            throw new LoadException("Failed to login kerberos", e);
+        }
+        LOG.info("Kerberos authentication with proxy user {} succeeded", options.proxyUser);
     }
 
     public HugeGraphLoader(String[] args) {
         this.context = new LoadContext(args);
         this.graphStruct = GraphStruct.of(this.context);
+        initAuth();
         this.taskManager = new TaskManager(this.context);
         this.addShutdownHook();
     }
@@ -124,6 +154,7 @@ public final class HugeGraphLoader {
 
         Printer.printRealTimeProgress(type, LoadUtil.lastLoaded(this.context,
                                                                 type));
+
         LoadOptions options = this.context.options();
         LoadSummary summary = this.context.summary();
         StopWatch totalTimer = StopWatch.createStarted();

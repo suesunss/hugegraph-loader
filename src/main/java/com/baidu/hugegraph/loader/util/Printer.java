@@ -155,7 +155,7 @@ public final class Printer {
 
     public static void printProgress(ElemType type, long loaded,
                                      long frequency, int batchSize) {
-        Printer.printInBackward(loaded);
+        /// Printer.printInBackward(loaded);
         if (loaded % frequency < batchSize) {
             LOG.info("{} has been loaded: {}", type.string(), loaded);
         }

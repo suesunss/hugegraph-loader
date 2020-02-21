@@ -53,6 +53,10 @@ public final class LoadOptions {
                description = "The port of HugeGraphServer")
     public int port = 8080;
 
+    @Parameter(names = {"--proxy-user"}, arity = 1,
+            description = "The proxy user of HDFS")
+    public String proxyUser = "hive";
+
     @Parameter(names = {"--token"}, arity = 1,
                description = "The token of graph for authentication")
     public String token = null;
@@ -126,6 +130,10 @@ public final class LoadOptions {
     @Parameter(names = {"--test-mode"}, arity = 1,
                description = "Whether the hugegraph-loader work in test mode")
     public boolean testMode = false;
+
+    @Parameter(names = {"--print-realtime-progress"}, arity = 1,
+            description = "Whether the hugegraph-loader print realtime progress")
+    public boolean printRealTimeProgress = true;
 
     @Parameter(names = {"--help"}, help = true,
                description = "Print usage of HugeGraphLoader")

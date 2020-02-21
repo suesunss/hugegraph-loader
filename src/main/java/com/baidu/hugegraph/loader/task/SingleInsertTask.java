@@ -63,7 +63,9 @@ public class SingleInsertTask<GE extends GraphElement> extends InsertTask<GE> {
                 this.metrics().increaseLoadSuccess();
             } catch (Exception e) {
                 this.metrics().increaseLoadFailure();
-                LOG.error("Single insert {} error", this.type(), e);
+                if (!this.context().stopped()) {
+                    LOG.error("Single insert {} error", this.type(), e);
+                }
                 if (this.options().testMode) {
                     throw e;
                 }
@@ -72,17 +74,19 @@ public class SingleInsertTask<GE extends GraphElement> extends InsertTask<GE> {
 
                 long failures = this.context().summary().totalInsertFailures();
                 if (failures >= this.options().maxInsertErrors) {
-                    Printer.printError("More than %s %s insert error, stop " +
-                                       "parsing and waiting other insert " +
-                                       "tasks finished",
-                                       this.options().maxInsertErrors,
-                                       this.type().string());
+                    if (!this.context().stopped()) {
+                        Printer.printError("More than %s %s insert error, stop " +
+                                        "parsing and waiting other insert " +
+                                        "tasks finished",
+                                this.options().maxInsertErrors,
+                                this.type().string());
+                    }
                     this.context().stopLoading();
                 }
             }
         }
         Printer.printProgress(this.type(), this.metrics().loadSuccess(),
-                              SINGLE_PRINT_FREQ, this.batch().size());
+                SINGLE_PRINT_FREQ, this.batch().size());
     }
 
     private void addSingle(ElemType type, Record<GE> record) {
