@@ -1,23 +1,15 @@
-# hugegraph-loader
+# hugegraph-loader 图灵分支（物理机版本）
 
-[![License](https://img.shields.io/badge/license-Apache%202-0E78BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![Build Status](https://travis-ci.org/hugegraph/hugegraph-loader.svg?branch=master)](https://travis-ci.org/hugegraph/hugegraph-loader)
-[![codecov](https://codecov.io/gh/hugegraph/hugegraph-loader/branch/master/graph/badge.svg)](https://codecov.io/gh/hugegraph/hugegraph-loader)
+## 版本兼容
+0.3.0 (兼容 hugegraph-loader-0.10.1 和 hugegraph-0.10.4)
 
-hugegraph-loader is a customizable command line utility for loading small to medium size graph datasets into the HugeGraph database from multiple data sources with various input formats.
+## 使用说明
+- 使用前要先导出 hadoop 环境变量
+```bash
+export /opt/cloudera/parcels/CDH/lib/hadoop
+```
 
-## Features
-
-- Multiple data sources, such as local file(path), HDFS file(path), MySQL
-- Various input formats, such as json, csv, and text with any delimiters.
-- Diverse options, with which users can manage the data loading intuitively.
-- Detecting schema from data automatically, reduce the complex work of schema management.
-- Advanced customized operations with groovy script, users can configure how to construct vertices and edges by themselves.
-
-## Learn More
-
-The [project homepage](https://hugegraph.github.io/hugegraph-doc/) contains more information about hugegraph-loader. 
-
-## License
-
-hugegraph-loader is licensed under Apache 2.0 License.
+- 导入样例
+```bash
+./hugegraph-loader -g hugegraph -h fuxi-luoge-61 -p 31495 -s /home/luoge-graph/projects/turing/hugegraph/examples/nsh-trade-hdfs/hdfs/schema.groovy -f /home/luoge-graph/projects/turing/hugegraph/examples/nsh-trade-hdfs/hdfs/struct.json --kerberos-user luoge-graph --kerberos-realm FUXI-LUOGE-02 --kerberos-keytab /home/luoge-graph/luoge-graph.keytab
+```
