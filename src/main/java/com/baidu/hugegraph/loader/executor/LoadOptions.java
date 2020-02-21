@@ -131,9 +131,17 @@ public final class LoadOptions {
                description = "Whether the hugegraph-loader work in test mode")
     public boolean testMode = false;
 
-    @Parameter(names = {"--print-realtime-progress"}, arity = 1,
-            description = "Whether the hugegraph-loader print realtime progress")
-    public boolean printRealTimeProgress = true;
+    @Parameter(names = {"--kerberos-user"}, arity = 1,
+            description = "Kerberos user for authentication")
+    public String kerberosUser;
+
+    @Parameter(names = {"--kerberos-realm"}, arity = 1,
+            description = "Kerberos user for authentication")
+    public String kerberosRealm;
+
+    @Parameter(names = {"--kerberos-keytab"}, arity = 1,
+            description = "Kerberos user for authentication")
+    public String kerberosKeytab;
 
     @Parameter(names = {"--help"}, help = true,
                description = "Print usage of HugeGraphLoader")

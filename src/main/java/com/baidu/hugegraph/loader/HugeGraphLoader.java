@@ -21,7 +21,6 @@ package com.baidu.hugegraph.loader;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -64,43 +63,36 @@ public final class HugeGraphLoader {
     private final GraphStruct graphStruct;
     private final TaskManager taskManager;
 
-    private static volatile UserGroupInformation proxyUgi;
-
     public static void main(String[] args) {
         HugeGraphLoader loader = new HugeGraphLoader(args);
-        try {
-            proxyUgi.doAs((PrivilegedExceptionAction<Object>) () -> {
-                loader.load();
-                return null;
-            });
-        } catch (IOException | InterruptedException e) {
-            LOG.error("Failed to load with proxy user {}", proxyUgi.getUserName(), e);
-            System.exit(Constants.EXIT_CODE_ERROR);
-        }
-    }
-
-    private void initAuth() {
-        System.setProperty("java.security.krb5.conf", "/etc/krb5.conf");
-        Configuration configuration = new Configuration();
-        configuration.set("hadoop.security.authentication", "Kerberos");
-        UserGroupInformation.setConfiguration(configuration);
-        LoadOptions options = this.context.options();
-        try {
-            UserGroupInformation.loginUserFromKeytab("hdfs@FUXI-LUOGE-02", "/etc/hdfs.keytab");
-            UserGroupInformation superUser = UserGroupInformation.getCurrentUser();
-            proxyUgi = UserGroupInformation.createProxyUser(options.proxyUser, superUser);
-        } catch (IOException e) {
-            throw new LoadException("Failed to login kerberos", e);
-        }
-        LOG.info("Kerberos authentication with proxy user {} succeeded", options.proxyUser);
+        loader.load();
     }
 
     public HugeGraphLoader(String[] args) {
         this.context = new LoadContext(args);
         this.graphStruct = GraphStruct.of(this.context);
-        initAuth();
+        tryInitAuth();
         this.taskManager = new TaskManager(this.context);
         this.addShutdownHook();
+    }
+
+    private void tryInitAuth() {
+        String kerberosUser = this.context.options().kerberosUser;
+        String kerberosRealm = this.context.options().kerberosRealm;
+        String kerberosKeytab = this.context.options().kerberosKeytab;
+        if (kerberosUser != null && kerberosRealm != null && kerberosKeytab != null) {
+            System.setProperty("java.security.krb5.conf", "/etc/krb5.conf");
+            Configuration configuration = new Configuration();
+            configuration.set("hadoop.security.authentication", "Kerberos");
+            UserGroupInformation.setConfiguration(configuration);
+            try {
+                UserGroupInformation.loginUserFromKeytab(kerberosUser + "@" + kerberosRealm, kerberosKeytab);
+            } catch (IOException e) {
+                throw new LoadException("Failed to login kerberos", e);
+            }
+            LOG.info("Kerberos authentication with user {} succeeded", kerberosUser);
+            System.out.println("Kerberos authentication with user " + kerberosUser + " succeeded");
+        }
     }
 
     private void addShutdownHook() {
@@ -143,7 +135,7 @@ public final class HugeGraphLoader {
             script = FileUtils.readFileToString(schemaFile, Constants.CHARSET);
         } catch (IOException e) {
             throw new LoadException("Read schema file '%s' error",
-                                    e, options.schema);
+                    e, options.schema);
         }
         groovyExecutor.execute(script, client);
     }
@@ -153,7 +145,7 @@ public final class HugeGraphLoader {
         this.context.loadingType(type);
 
         Printer.printRealTimeProgress(type, LoadUtil.lastLoaded(this.context,
-                                                                type));
+                type));
 
         LoadOptions options = this.context.options();
         LoadSummary summary = this.context.summary();
@@ -188,7 +180,7 @@ public final class HugeGraphLoader {
                 newProgress.addStruct(struct);
                 // Produce batch of vertices/edges and execute loading tasks
                 try (ElementBuilder<?> builder = ElementBuilder.of(this.context,
-                                                                   struct)) {
+                        struct)) {
                     this.load(builder);
                 }
             }
@@ -199,7 +191,7 @@ public final class HugeGraphLoader {
             loadTimer.stop();
             metrics.loadTime(loadTimer.getTime(TimeUnit.MILLISECONDS));
             LOG.info("Loading {} '{}' with average rate: {}/s",
-                     metrics.loadSuccess(), struct, metrics.averageLoadRate());
+                    metrics.loadSuccess(), struct, metrics.averageLoadRate());
         }
     }
 
@@ -211,7 +203,7 @@ public final class HugeGraphLoader {
 
         StopWatch parseTimer = StopWatch.createStarted();
         List<Record<GE>> batch = new ArrayList<>(batchSize);
-        for (boolean finished = false; !this.context.stopped() && !finished;) {
+        for (boolean finished = false; !this.context.stopped() && !finished; ) {
             try {
                 if (builder.hasNext()) {
                     Record<GE> record = builder.next();
@@ -243,7 +235,7 @@ public final class HugeGraphLoader {
         parseTimer.stop();
         metrics.parseTime(parseTimer.getTime(TimeUnit.MILLISECONDS));
         LOG.info("Parsing {} '{}' with average rate: {}/s",
-                 metrics.parseSuccess(), struct, metrics.parseRate());
+                metrics.parseSuccess(), struct, metrics.parseRate());
     }
 
     private void handleParseFailure(ElementStruct struct, ParseException e) {
@@ -260,8 +252,8 @@ public final class HugeGraphLoader {
         long failures = this.context.summary().totalParseFailures();
         if (failures >= options.maxParseErrors) {
             Printer.printError("More than %s %s parsing error, stop parsing " +
-                               "and waiting all insert tasks finished",
-                               options.maxParseErrors, struct.type().string());
+                            "and waiting all insert tasks finished",
+                    options.maxParseErrors, struct.type().string());
             this.context.stopLoading();
         }
     }
