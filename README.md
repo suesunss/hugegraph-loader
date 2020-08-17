@@ -6,7 +6,7 @@
 ## 使用说明
 - 使用前要先导出 hadoop 环境变量
 ```bash
-export /opt/cloudera/parcels/CDH/lib/hadoop
+export HADOOP_HOME=/opt/cloudera/parcels/CDH/lib/hadoop
 ```
 
 - 导入样例
